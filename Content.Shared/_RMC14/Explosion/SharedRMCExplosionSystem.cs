@@ -1,13 +1,15 @@
+using Content.Shared._RMC14.Slow;
 using Content.Shared._RMC14.Stun;
-using Content.Shared._RMC14.Xenonids.Fortify;
 using Content.Shared.Body.Systems;
 using Content.Shared.Coordinates;
 using Content.Shared.Damage.Prototypes;
 using Content.Shared.Explosion;
 using Content.Shared.FixedPoint;
 using Content.Shared.Standing;
+using Content.Shared.Sticky.Components;
 using Content.Shared.Stunnable;
 using Content.Shared.Throwing;
+using Content.Shared.Whitelist;
 using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
@@ -18,12 +20,14 @@ public abstract class SharedRMCExplosionSystem : EntitySystem
 {
     [Dependency] private readonly SharedBodySystem _body = default!;
     [Dependency] private readonly EntityLookupSystem _entityLookup = default!;
+    [Dependency] private readonly EntityWhitelistSystem _entityWhitelist = default!;
     [Dependency] private readonly IRobustRandom _random = default!;
     [Dependency] private readonly RMCSizeStunSystem _sizeStun = default!;
     [Dependency] private readonly StandingStateSystem _standing = default!;
     [Dependency] private readonly SharedStunSystem _stun = default!;
     [Dependency] private readonly ThrowingSystem _throwing = default!;
     [Dependency] private readonly SharedTransformSystem _transform = default!;
+    [Dependency] private readonly RMCSlowSystem _slow = default!;
 
     private static readonly ProtoId<DamageTypePrototype> StructuralDamage = "Structural";
 
@@ -33,13 +37,14 @@ public abstract class SharedRMCExplosionSystem : EntitySystem
     {
         SubscribeLocalEvent<CMExplosionEffectComponent, CMExplosiveTriggeredEvent>(OnExplosionEffectTriggered);
 
-        SubscribeLocalEvent<RMCExplosiveDeleteWallsComponent, CMExplosiveTriggeredEvent>(OnDeleteWallsTriggered);
+        SubscribeLocalEvent<RMCExplosiveDeleteComponent, CMExplosiveTriggeredEvent>(OnDeleteWallsTriggered);
 
         SubscribeLocalEvent<ExplosionRandomResistanceComponent, GetExplosionResistanceEvent>(OnExplosionRandomResistanceGet);
 
         SubscribeLocalEvent<StunOnExplosionReceivedComponent, ExplosionReceivedEvent>(OnStunOnExplosionReceivedBeforeExplode);
 
         SubscribeLocalEvent<DestroyedByExplosionTypeComponent, ExplosionReceivedEvent>(OnDestroyedByExplosionReceived);
+
         SubscribeLocalEvent<MobGibbedByExplosionTypeComponent, ExplosionReceivedEvent>(OnMobGibbedByExplosionReceived);
     }
 
@@ -48,7 +53,7 @@ public abstract class SharedRMCExplosionSystem : EntitySystem
         DoEffect(ent);
     }
 
-    private void OnDeleteWallsTriggered(Entity<RMCExplosiveDeleteWallsComponent> ent, ref CMExplosiveTriggeredEvent args)
+    private void OnDeleteWallsTriggered(Entity<RMCExplosiveDeleteComponent> ent, ref CMExplosiveTriggeredEvent args)
     {
         _walls.Clear();
         _entityLookup.GetEntitiesInRange(ent.Owner.ToCoordinates(), ent.Comp.Range, _walls);
@@ -56,6 +61,14 @@ public abstract class SharedRMCExplosionSystem : EntitySystem
         foreach (var wall in _walls)
         {
             QueueDel(wall);
+        }
+
+        if (ent.Comp.Whitelist != null &&
+            HasComp<StickyComponent>(ent) &&
+            Transform(ent).ParentUid is { Valid: true } parent &&
+            _entityWhitelist.IsWhitelistPass(ent.Comp.Whitelist, parent))
+        {
+            QueueDel(parent);
         }
     }
 
@@ -66,26 +79,38 @@ public abstract class SharedRMCExplosionSystem : EntitySystem
         args.DamageCoefficient *= resistance;
     }
 
+    public void ChangeExplosionStunResistance(EntityUid ent, StunOnExplosionReceivedComponent? comp, bool isStunnable)
+    {
+        if (!Resolve(ent, ref comp, false))
+            return;
+
+        comp.Weak = isStunnable;
+    }
+
     private void OnStunOnExplosionReceivedBeforeExplode(Entity<StunOnExplosionReceivedComponent> ent, ref ExplosionReceivedEvent args)
     {
         var damage = args.Damage.GetTotal();
         var factor = Math.Round(damage.Double() * 0.05) / 2;
         factor = Math.Min(20, factor);
 
+        // TODO RMC14 don't reduce if explosion is on same tile
         if (_standing.IsDown(ent))
             factor *= 0.5;
 
         _sizeStun.TryGetSize(ent, out var size);
-        if (factor > 0 && ent.Comp.Weak && !HasComp<XenoFortifyComponent>(ent))
+        if (factor > 0 && ent.Comp.Weak)
         {
             var stunTime = TimeSpan.FromSeconds(factor / 2.5);
             _stun.TryStun(ent, stunTime, true);
             _stun.TryKnockdown(ent, stunTime, true);
 
             if (size < RMCSizes.Big)
-                _sizeStun.Superslow(ent, TimeSpan.FromSeconds(factor), TimeSpan.FromSeconds(factor / 2));
+            {
+                _slow.TrySlowdown(ent, TimeSpan.FromSeconds(factor));
+                _slow.TrySuperSlowdown(ent, TimeSpan.FromSeconds(factor / 2));
+            }
             else
-                _stun.TrySlowdown(ent, TimeSpan.FromSeconds(factor / 3), true);
+                _slow.TrySlowdown(ent, TimeSpan.FromSeconds(factor / 3));
 
             var pos = _transform.GetWorldPosition(ent);
             var dir = pos - args.Epicenter.Position;
@@ -102,9 +127,12 @@ public abstract class SharedRMCExplosionSystem : EntitySystem
             _stun.TryStun(ent, stunTime, true);
             _stun.TryKnockdown(ent, stunTime, true);
             if (size < RMCSizes.Big)
-                _sizeStun.Superslow(ent, TimeSpan.FromSeconds(factor), TimeSpan.FromSeconds(factor / 2));
+            {
+                _slow.TrySlowdown(ent, TimeSpan.FromSeconds(factor));
+                _slow.TrySuperSlowdown(ent, TimeSpan.FromSeconds(factor / 2));
+            }
             else
-                _stun.TrySlowdown(ent, TimeSpan.FromSeconds(factor / 3), true);
+                _slow.TrySlowdown(ent, TimeSpan.FromSeconds(factor / 3));
         }
     }
 

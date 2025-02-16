@@ -18,7 +18,7 @@
     pointsType: Specialist
     sections:
     - name: Weapons Specialist Sets
-      choices: { SquadSpecKit: 1 }
+      takeOne: SquadSpecKit
       sharedSpecLimit: 2 # 2 as requested until Pyro is added
       entries:
       - id: RMCDemoSpecEquipmentCase
@@ -32,16 +32,16 @@
       entries:
       - id: RMCMagazineRifleM4SPRA19Impact
         points: 40
-#      - id: RMCMagazineRifleM4SPRA19 # TODO rmc14 RMCMagazineRifleM4SPRA19Incendiary
-#        points: 40
+      - id: RMCMagazineRifleM4SPRA19Incendiary
+        points: 40
       - id: RMCMagazineRifleM4SPRA19
         points: 40
     - name: Extra Sniper Ammunition
       entries:
 #      - id: CMMagazineSniperM96S # TODO rmc14 CMMagazineSniperM96SFlak
 #        points: 40
-#      - id: CMMagazineSniperM96S # TODO rmc14 CMMagazineSniperM96SIncendiary
-#        points: 40
+      - id: CMMagazineSniperM96SIncendiary
+        points: 40
       - id: CMMagazineSniperM96S
         points: 40
     - name: Extra Demolitionist Ammunition
@@ -66,8 +66,10 @@
         name: M40 HSDP Smoke Grenades (x6)
         points: 20
         spawn: 6
-    #- id: M40HIDPIncendiaryGrenadesx6
-    #  points: 40
+      - id: RMCGrenadeIncendiary
+        name: M40 HIDP Incendiary Grenades (x6)
+        points: 40
+        spawn: 6
     #- id: M40HPDPWhitePhosphorusGrenadesx6
     #  points: 40
     #- id: M74AGMFFragmentationGrenadesx6
@@ -162,9 +164,9 @@
       - id: RMCMaskRebreather
     - name: Restricted Firearms
       entries:
-      - id: RMCMK80Case
+      - id: RMCGunCasePistolMK80
         points: 15
-      - id: RMCSmartPistolCase
+      - id: RMCGunCasePistolSmart
         points: 15
     - name: Sidearm Ammunition
       entries:
@@ -177,8 +179,10 @@
     - name: Clothing Items
       entries:
       - id: RMCScabbardMacheteFilled
+        name: machete scabbard (Full)
         points: 6
       - id: RMCPouchMacheteFilled
+        name: machete pouch (Full)
         points: 15
       - id: RMCBackpackRTO
         points: 15
@@ -189,17 +193,18 @@
       - id: CMBeltUtilityCombat
         points: 15
       - id: RMCPouchAutoinjectorFill
+        name: autoinjector pouch (Full)
         points: 15
     - name: Utilities
       entries:
       - id: CMRollerBedSpawnFolded
         points: 5
+      - id: RMCFulton20
+        points: 5
       - id: CMFireExtinguisherPortable
         points: 5
       - id: RMCMotionDetector
         points: 10
-    #- id: CMFultonDeviceStack
-    #- id: CMMotionDetector
       - id: RMCWhistle
         points: 5
     - name: Binoculars

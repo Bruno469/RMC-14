@@ -1,6 +1,7 @@
-﻿using Content.Shared._RMC14.Marines.Skills;
+using Content.Shared._RMC14.Marines.Skills;
 using Robust.Shared.Audio;
 using Robust.Shared.GameStates;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization.TypeSerializers.Implementations.Custom;
 
 namespace Content.Shared._RMC14.Mortar;
@@ -73,11 +74,14 @@ public sealed partial class MortarComponent : Component
     public SoundSpecifier? ReloadSound = new SoundPathSpecifier("/Audio/_RMC14/Weapons/gun_mortar_reload.ogg");
 
     [DataField, AutoNetworkedField]
-    public SoundSpecifier? FireSound = new SoundPathSpecifier("/Audio/_RMC14/Weapons/gun_mortar_fire.ogg");
+    public SoundSpecifier? FireSound = new SoundPathSpecifier("/Audio/_RMC14/Weapons/gun_mortar_fire.ogg", AudioParams.Default.AddVolume(4));
 
     [DataField, AutoNetworkedField]
     public TimeSpan? Cooldown;
 
     [DataField(customTypeSerializer: typeof(TimeOffsetSerializer)), AutoNetworkedField, AutoPausedField]
     public TimeSpan LastFiredAt;
+
+    [DataField, AutoNetworkedField]
+    public EntProtoId Drop = "RMCMortarKit";
 }
